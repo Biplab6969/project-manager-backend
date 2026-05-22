@@ -45,7 +45,8 @@ const registerUser = async (req, res) => {
             expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000),
         });
 
-        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
         const emailBody = `<p>Click <a href="${verificationLink}">here</a> to verify your email address. This link will expire in 1 hour.</p>`;
         const emailSubject = "Verify your email";
 
@@ -78,7 +79,9 @@ const loginUser = async (req, res) => {
             if (existingVerification && existingVerification.expiresAt > new Date()) {
                 return res.status(400).json({ message: "Email not verified. Please check your email for the verification link." });
             } else {
-                await Verification.findByIdAndDelete(existingVerification._id);
+                if (existingVerification) {
+                    await Verification.findByIdAndDelete(existingVerification._id);
+                }
 
                 const verificationToken = jwt.sign(
                     { userId: user._id, purpose: "email-Verification" },
@@ -90,7 +93,8 @@ const loginUser = async (req, res) => {
                     token: verificationToken,
                     expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000),
                 });
-                const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+                const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+                const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
                 const emailBody = `<p>Click <a href="${verificationLink}">here</a> to verify your email address. This link will expire in 1 hour.</p>`;
                 const emailSubject = "Verify your email";
 
@@ -100,9 +104,8 @@ const loginUser = async (req, res) => {
                     return res.status(500).json({ message: "Failed to send verification email. Please try again later." });
                 }
 
-                res.status(201).json({
-                    message:
-                        "Varification email sent to your email. Please check and verify your account.",
+                return res.status(400).json({
+                    message: "Email not verified. A new verification link has been sent to your email.",
                 });
             }
         }
@@ -216,7 +219,8 @@ const resetPasswordRequest = async (req, res) => {
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
         });
 
-        const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetPasswordToken}`;
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const resetPasswordLink = `${frontendUrl}/reset-password?token=${resetPasswordToken}`;
         const emailBody = `<p>Click <a href="${resetPasswordLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`;
         const emailSubject = "Reset your password";
         const isEmailSent = await sendEmail(email, emailSubject, emailBody);

@@ -3,7 +3,15 @@ import User from "../models/user.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; //Bearer dhghjhdkjfg
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const token = authHeader.split(" ")[1]; //Bearer dhghjhdkjfg
 
     if (!token) {
       return res.status(401).json({

@@ -9,13 +9,31 @@ import routes from './routes/index.js';
 dotenv.config()
 
 const app = express();
+const allowedOrigins = [
+    /^http:\/\/localhost:\d+$/,
+    /^http:\/\/127\.0\.0\.1:\d+$/,
+    /^https:\/\/.+\.vercel\.app$/,
+    "https://project-manager-frontend-ten.vercel.app",
+];
+
 app.use(
     cors({
-        origin: [
-    "http://localhost:5173", 
-    "https://project-manager-frontend-ten.vercel.app"
-  ],
-        methods:["GET","POST","PUT","DELETE"],
+        origin: (origin, callback) => {
+            if (!origin) {
+                return callback(null, true);
+            }
+
+            const isAllowed = allowedOrigins.some((allowedOrigin) => {
+                if (allowedOrigin instanceof RegExp) {
+                    return allowedOrigin.test(origin);
+                }
+
+                return allowedOrigin === origin;
+            });
+
+            return callback(isAllowed ? null : new Error("Not allowed by CORS"), isAllowed);
+        },
+        methods:["GET","POST","PUT","DELETE","OPTIONS"],
         allowedHeaders:["Content-Type","Authorization"],
     })
 );

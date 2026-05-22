@@ -10,10 +10,10 @@ dotenv.config()
 
 const app = express();
 const allowedOrigins = [
+    "https://biplab-taskhub.netlify.app",
+    /^https:\/\/.+\.netlify\.app$/,
     /^http:\/\/localhost:\d+$/,
     /^http:\/\/127\.0\.0\.1:\d+$/,
-    /^https:\/\/.+\.vercel\.app$/,
-    "https://project-manager-frontend-ten.vercel.app",
 ];
 
 app.use(

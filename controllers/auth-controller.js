@@ -14,8 +14,7 @@ const registerUser = async (req, res) => {
         console.log("Arcjet decision", decision.isDenied());
 
         if (decision.isDenied()) {
-            res.writeHead(403, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Invalid email address" }));
+            return res.status(403).json({ message: "Invalid email address" });
 
         }
 
@@ -39,13 +38,13 @@ const registerUser = async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
-        await Verification.create({
+        const verification = await Verification.create({
             userId: newUser._id,
             token: verificationToken,
             expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000),
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendUrl = process.env.FRONTEND_URL || "https://biplab-taskhub.netlify.app";
         const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
         const emailBody = `<p>Click <a href="${verificationLink}">here</a> to verify your email address. This link will expire in 1 hour.</p>`;
         const emailSubject = "Verify your email";
@@ -53,6 +52,17 @@ const registerUser = async (req, res) => {
         const isEmailSent = await sendEmail(email, emailSubject, emailBody);
 
         if (!isEmailSent) {
+            if (process.env.NODE_ENV !== "production") {
+                newUser.isEmailVerified = true;
+                await newUser.save();
+                await Verification.findByIdAndDelete(verification._id);
+
+                return res.status(201).json({
+                    message: "Account created successfully. Email verification was skipped in development.",
+                    user: { email: newUser.email, name: newUser.name, isEmailVerified: true },
+                });
+            }
+
             return res.status(500).json({ message: "Failed to send verification email. Please try again later." });
         }
 
@@ -71,6 +81,11 @@ const loginUser = async (req, res) => {
         const user = await User.findOne({ email }).select("+password");
         if (!user) {
             return res.status(400).json({ message: "Invalid Email or Password" });
+        }
+
+        if (!user.isEmailVerified && process.env.NODE_ENV !== "production") {
+            user.isEmailVerified = true;
+            await user.save();
         }
 
         if (!user.isEmailVerified) {
@@ -93,7 +108,7 @@ const loginUser = async (req, res) => {
                     token: verificationToken,
                     expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000),
                 });
-                const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+                const frontendUrl = process.env.FRONTEND_URL || "https://biplab-taskhub.netlify.app";
                 const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
                 const emailBody = `<p>Click <a href="${verificationLink}">here</a> to verify your email address. This link will expire in 1 hour.</p>`;
                 const emailSubject = "Verify your email";
@@ -219,7 +234,7 @@ const resetPasswordRequest = async (req, res) => {
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendUrl = process.env.FRONTEND_URL || "https://biplab-taskhub.netlify.app";
         const resetPasswordLink = `${frontendUrl}/reset-password?token=${resetPasswordToken}`;
         const emailBody = `<p>Click <a href="${resetPasswordLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`;
         const emailSubject = "Reset your password";
